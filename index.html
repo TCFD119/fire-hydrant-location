@@ -1120,7 +1120,7 @@ function generateShareText() {
       refText = searchInfo.address || searchInfo.name || "火警地點";
   }
 
-let text = `🔥 火警地點\n`;
+let text = `🔥 火警地點(\n`;
 if (currentNearbyLat && currentNearbyLng) {
     text += `Google Maps：\nhttps://www.google.com/maps/dir/?api=1&destination=${currentNearbyLat},${currentNearbyLng}\n`;
 }
@@ -1129,7 +1129,7 @@ if (currentNearbyLat && currentNearbyLng) {
   nearbyItems.forEach((item, i) => {
     const p = item.properties; const name = p.name || '消防栓';
     const dm = item.dist < 1000 ? `${Math.round(item.dist)}m` : `${(item.dist/1000).toFixed(1)}km`;
-    text += `\n${i + 1}. ${name} \n直線距離 ${dm}\n📌導航：https://www.google.com/maps/dir/?api=1&destination=${item.latlng.lat},${item.latlng.lng}\n`;
+    text += `\n${i + 1}. ${name}【直線距離 ${dm}】\n📌導航：https://www.google.com/maps/dir/?api=1&destination=${item.latlng.lat},${item.latlng.lng}\n`
   });
   return text;
 }
