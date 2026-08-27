@@ -1120,11 +1120,7 @@ function generateShareText() {
       refText = searchInfo.address || searchInfo.name || "火警地點";
   }
 
-let text = `🔥 火警地點（點擊下方導航前往）\n\n`;
-if (currentNearbyLat && currentNearbyLng) {
-    // 網址末端加上 &openExternalBrowser=1 解決 LINE 無法點擊、超連結失效的問題
-    text += `Google Maps：\nhttps://google.com{currentNearbyLat},${currentNearbyLng}&openExternalBrowser=1\n`;
-}
+let text = `🔥 火警地點${refText}\n`; if (currentNearbyLat && currentNearbyLng) { text += `Google Maps:\nhttps://www.google.com/maps/dir/?api=1&destination=${currentNearbyLat},${currentNearbyLng}\n`; }
   
   text += `\n🧯 附近消防栓資訊\n`;
   nearbyItems.forEach((item, i) => {
