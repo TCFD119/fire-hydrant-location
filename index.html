@@ -1120,7 +1120,7 @@ function generateShareText() {
       refText = searchInfo.address || searchInfo.name || "火警地點";
   }
 
-  let text = `🔥 火警地點：${refText}\n`;
+  let text = `🔥 火警參考地點：${refText}\n`;
   if (currentNearbyLat && currentNearbyLng) {
       text += `Google Maps：\nhttps://www.google.com/maps/dir/?api=1&destination=${currentNearbyLat},${currentNearbyLng}\n`;
   }
