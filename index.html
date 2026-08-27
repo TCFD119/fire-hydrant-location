@@ -1121,7 +1121,6 @@ function generateShareText() {
   }
 
 let text = `🔥 火警地點\n`;
-   nearbyItems.forEach((item, i) => {
 if (currentNearbyLat && currentNearbyLng) {
     text += `Google Maps：\nhttps://www.google.com/maps/dir/?api=1&destination=${currentNearbyLat},${currentNearbyLng}\n`;
 }
