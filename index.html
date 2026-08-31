@@ -17,35 +17,15 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   
   <style>
-    /* ── 旋轉防抖專用類別 (旋轉中瞬間凍結所有動畫與轉場，徹底消除抖動) ── */
-    html.is-rotating, html.is-rotating * {
-      transition: none !important;
-      animation: none !important;
-    }
-
-    /* ── 全局與字體設定 (徹底消除邊界留白與旋轉抖動) ─────────────────── */
+    /* ── 全局與字體設定 ─────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html {
-      width: 100%; height: 100%;
-      overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    }
     body { 
-      width: 100%; height: 100%;
-      margin: 0; padding: 0; overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", sans-serif; 
-      background: #f2f2f7; 
+      height: 100dvh; overflow: hidden; background: #f2f2f7; 
       -webkit-font-smoothing: antialiased; overscroll-behavior: none;
-      color: #1c1c1e;
-      touch-action: pan-x pan-y;
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
+      color: #1c1c1e; transition: background-color 0.3s ease;
     }
-    #map { 
-      position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-      width: 100%; height: 100%; z-index: 0; 
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
-    }
+    #map { position: fixed; inset: 0; z-index: 0; }
 
     /* ── 毛玻璃共用類別 ─────────────────── */
     .glass-panel {
@@ -145,24 +125,20 @@
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 4px 16px rgba(0,0,0,0.15);
     }
 
-    /* ── 底部抽屜面板共用設定 (防陰影露餡、防旋轉飛舞抖動) ─────────────── */
+    /* ── 底部抽屜面板共用設定 (統一介面) ─────────────── */
     .bottom-sheet {
       position: fixed; bottom: 0; left: 0; right: 0; 
       border-radius: 32px 32px 0 0; 
       z-index: 860; 
       flex-direction: column; display: flex;
-      padding-bottom: env(safe-area-inset-bottom, 16px);
-      transform: translateY(calc(100% + 50px)); 
-      opacity: 0; visibility: hidden; pointer-events: none;
-      transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease, visibility 0.35s;
-      background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding-bottom: env(safe-area-inset-bottom);
+      transform: translateY(100%); 
+      transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(16px);
       box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.22);
       max-height: 75dvh;
     }
-    .bottom-sheet.open { 
-      transform: translateY(0); 
-      opacity: 1; visibility: visible; pointer-events: auto;
-    }
+    .bottom-sheet.open { transform: translateY(0); }
     
     .sheet-drag-handle { 
       width: 100%; height: 28px; display: flex; align-items: flex-end; justify-content: center; 
@@ -421,23 +397,23 @@
     body.dark-mode #north-arrow { background: rgba(28, 28, 30, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); }
     body.dark-mode .leaflet-control-scale-line { background: rgba(28,28,30,0.85); border-color: #f2f2f7; color: #f2f2f7; }
 
-    /* ⭐ RWD 平板/桌機側邊欄模式 (限制高寬條件，避免手機橫向時誤判觸發側邊欄) */
-    @media (min-width: 900px) and (min-height: 520px) {
-      /* 搜尋列與選單統一寬度 400px，固定在左上角 */
+    /* ⭐ RWD 平板/桌機側邊欄模式 (Tablet UI) */
+    @media (min-width: 769px) {
+      /* 搜尋列與選單統一寬度 340px，固定在左上角 */
       #search-card { left: 24px; top: 24px; bottom: auto; width: 400px; max-width: none; transform: none; }
       #search-suggestions { left: 24px; top: 88px; bottom: auto; width: 400px; transform: none; flex-direction: column; }
       
       /* ⭐ 側邊欄往下推，讓出頂部空間給搜尋列 */
       .bottom-sheet {
-        top: 104px;
+        top: 104px; /* 24(頂距) + 56(搜尋列高) + 24(間距) */
         bottom: 24px; left: 24px; width: 340px; right: auto; border-radius: 24px;
-        transform: translateX(calc(-100% - 50px)); 
-        max-height: calc(100dvh - 128px);
+        transform: translateX(-120%); 
+        max-height: calc(100dvh - 128px); /* 100vh - 104(上) - 24(下) */
         border-bottom: none;
         box-shadow: 0 10px 40px rgba(0,0,0,0.15); border: 1px solid rgba(0, 0, 0, 0.08);
       }
       body.dark-mode .bottom-sheet { border-color: rgba(255, 255, 255, 0.1); border-top: 1px solid rgba(255, 255, 255, 0.1); }
-      .bottom-sheet.open { transform: translateX(0); opacity: 1; visibility: visible; pointer-events: auto; }
+      .bottom-sheet.open { transform: translateX(0); }
       
       .sheet-drag-handle { display: none; } 
       .panel-top { padding-top: 16px; }
@@ -653,16 +629,12 @@ function vibe() {
   try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
 }
 
-function isDesktopView() {
-  return window.matchMedia('(min-width: 900px) and (min-height: 520px)').matches;
-}
-
 function focusMap(latlng, zoomLevel = null, offsetRatio = 0) {
     map.invalidateSize(); 
 
     const targetZoom = zoomLevel || map.getZoom();
     
-    if (offsetRatio === 0 || isDesktopView()) {
+    if (offsetRatio === 0 || window.innerWidth >= 769) {
         map.setView(latlng, targetZoom, { animate: true, duration: 0.35 });
         return;
     }
@@ -680,7 +652,7 @@ function checkPanelsAndLegend() {
     const nearbyOpen = document.getElementById('nearby-panel').classList.contains('open');
     const legend = document.getElementById('legend');
 
-    if (isDesktopView()) {
+    if (window.innerWidth >= 769) {
         legend.classList.remove('hidden');
         return;
     }
@@ -728,6 +700,23 @@ function updateLayerSwitches() {
     document.getElementById('switch-theme').classList.toggle('on', mapMode === 'dark' || mapMode === 'satellite');
 }
 
+window.addEventListener('DOMContentLoaded', () => {
+  updateTileLayer();
+  if (hoseLinesVisible) { map.addLayer(hoseLinesLayer); } else { map.removeLayer(hoseLinesLayer); }
+  if (layerVisible) { map.addLayer(layerGroup); } else { map.removeLayer(layerGroup); }
+  if (aedVisible) { map.addLayer(aedLayerGroup); } else { map.removeLayer(aedLayerGroup); }
+  updateLayerSwitches();
+  
+  // 防鬼觸控保護
+  const uiElements = ['search-card', 'search-suggestions', 'north-arrow', 'primary-controls', 'layer-menu', 'legend', 'nearby-panel', 'search-panel', 'info-panel'];
+  uiElements.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+          L.DomEvent.disableClickPropagation(el);
+      }
+  });
+});
+
 function parseCSV(text) {
   const rows = [];
   let currentRow = [], currentCell = '', insideQuotes = false;
@@ -736,7 +725,7 @@ function parseCSV(text) {
     if (char === '"' && insideQuotes && nextChar === '"') { currentCell += '"'; i++; } 
     else if (char === '"') { insideQuotes = !insideQuotes; } 
     else if (char === ',' && !insideQuotes) { currentRow.push(currentCell); currentCell = ''; } 
-    else if ((char === '\n' || char === '\r') && !insideQuotes) {
+    else if (char === '\n' || char === '\r') {
       if (char === '\r' && nextChar === '\n') i++;
       currentRow.push(currentCell); rows.push(currentRow);
       currentRow = []; currentCell = ''; insideQuotes = false; 
@@ -764,21 +753,6 @@ function getHydrantType(props) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  updateTileLayer();
-  if (hoseLinesVisible) { map.addLayer(hoseLinesLayer); } else { map.removeLayer(hoseLinesLayer); }
-  if (layerVisible) { map.addLayer(layerGroup); } else { map.removeLayer(layerGroup); }
-  if (aedVisible) { map.addLayer(aedLayerGroup); } else { map.removeLayer(aedLayerGroup); }
-  updateLayerSwitches();
-  
-  // 防鬼觸控保護
-  const uiElements = ['search-card', 'search-suggestions', 'north-arrow', 'primary-controls', 'layer-menu', 'legend', 'nearby-panel', 'search-panel', 'info-panel'];
-  uiElements.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-          L.DomEvent.disableClickPropagation(el);
-      }
-  });
-
   try {
     const response = await fetch('臺中市消防栓水源位置資料.csv');
     if (!response.ok) throw new Error('找不到 臺中市消防栓水源位置資料.csv');
@@ -1004,8 +978,6 @@ function closeInfo() {
   checkPanelsAndLegend();
 }
 
-let highlightedPoints = [];
-
 function showNearby(lat, lng, centerName = null) {
   closeInfo();
   closeSearchPanel();
@@ -1033,7 +1005,7 @@ function showNearby(lat, lng, centerName = null) {
   });
 
   nearbyItems = [...allPoints].sort((a, b) => a.dist - b.dist).slice(0, nearbyCount);
-  highlightedPoints = [...nearbyItems];
+  const nearbySet = new Set(nearbyItems);
 
   nearbyItems.forEach((pt, i) => {
     pt.marker.setOpacity(0); 
@@ -1052,6 +1024,13 @@ function showNearby(lat, lng, centerName = null) {
       color: distColor, weight: 4, opacity: 0.8, dashArray: '10, 10', lineCap: 'round',
       className: 'flowing-line'
     }).addTo(hoseLinesLayer);
+  });
+
+  allPoints.forEach(pt => {
+    if (!nearbySet.has(pt)) {
+      pt.marker.setIcon(typeToIcon(pt.type, false, null));
+      pt.marker.setOpacity(1.0); 
+    }
   });
 
   // ⭐ UI 更新：直線距離
@@ -1096,13 +1075,10 @@ function flyTo(idx) {
 function clearNearbyHighlights() {
   highlightLayer.clearLayers();
   hoseLinesLayer.clearLayers(); 
-  if (highlightedPoints.length > 0) {
-    highlightedPoints.forEach(pt => {
-      pt.marker.setIcon(typeToIcon(pt.type, false, null));
-      pt.marker.setOpacity(1.0);
-    });
-    highlightedPoints = [];
-  }
+  allPoints.forEach(pt => {
+    pt.marker.setIcon(typeToIcon(pt.type, false, null));
+    pt.marker.setOpacity(1.0); 
+  });
   nearbyItems = [];
 }
 
@@ -1175,7 +1151,7 @@ function initDrag(panelId, dragId, closeFn) {
     const p = document.getElementById(panelId), d = document.getElementById(dragId); 
     let startY = 0, curY = 0, drag = false; 
     d.addEventListener('pointerdown', e => { 
-        if (isDesktopView()) return; 
+        if (window.innerWidth >= 769) return; 
         startY = e.clientY; drag = true; p.style.transition = 'none'; 
         try{e.target.setPointerCapture(e.pointerId);}catch(err){} 
     }, { passive: true }); 
@@ -1505,30 +1481,22 @@ function toggleAll() {
 
 function showStatus(msg, duration) { const el = document.getElementById('status'); el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', duration); }
 
-if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-  window.addEventListener('deviceorientation', handleOrientation, true);
+if (window.DeviceOrientationEvent) {
+  window.addEventListener('deviceorientation', function(event) {
+    let heading = null;
+    if (event.webkitCompassHeading) {
+      heading = event.webkitCompassHeading;
+    } else if (event.absolute && event.alpha !== null) {
+      heading = 360 - event.alpha;
+    } else if (event.alpha !== null) {
+      heading = 360 - event.alpha; 
+    }
+    if (heading !== null) {
+      const arrow = document.getElementById('user-heading-arrow');
+      if (arrow) arrow.style.transform = `rotate(${heading}deg)`;
+    }
+  }, true);
 }
-// ⭐ 終極螢幕旋轉與視窗防抖更新 (杜絕抖動、跳動與瓦片破圖)
-let viewportResizeTimer = null;
-function handleViewportResize() {
-  clearTimeout(viewportResizeTimer);
-  viewportResizeTimer = setTimeout(() => {
-    if (map) map.invalidateSize({ animate: false });
-    checkPanelsAndLegend();
-  }, 100);
-}
-window.addEventListener('resize', handleViewportResize);
-
-window.addEventListener('orientationchange', () => {
-  document.documentElement.classList.add('is-rotating');
-  if (map) map.invalidateSize({ animate: false });
-  setTimeout(() => {
-    if (map) map.invalidateSize({ animate: false });
-    checkPanelsAndLegend();
-    document.documentElement.classList.remove('is-rotating');
-  }, 320);
-});
-
 </script>
 </body>
 </html>
