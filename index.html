@@ -17,17 +17,35 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   
   <style>
+    /* ── 旋轉防抖專用類別 (旋轉中瞬間凍結所有動畫與轉場，徹底消除抖動) ── */
+    html.is-rotating, html.is-rotating * {
+      transition: none !important;
+      animation: none !important;
+    }
+
     /* ── 全局與字體設定 (徹底消除邊界留白與旋轉抖動) ─────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { 
-      width: 100%; height: 100%; height: 100dvh;
-      margin: 0; padding: 0; overflow: hidden; position: fixed; inset: 0;
+    html {
+      width: 100%; height: 100%;
+      overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    }
+    body { 
+      width: 100%; height: 100%;
+      margin: 0; padding: 0; overflow: hidden; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", "PingFang TC", sans-serif; 
       background: #f2f2f7; 
       -webkit-font-smoothing: antialiased; overscroll-behavior: none;
-      color: #1c1c1e; transition: background-color 0.3s ease;
+      color: #1c1c1e;
+      touch-action: pan-x pan-y;
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
     }
-    #map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+    #map { 
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+      width: 100%; height: 100%; z-index: 0; 
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
 
     /* ── 毛玻璃共用類別 ─────────────────── */
     .glass-panel {
@@ -635,12 +653,16 @@ function vibe() {
   try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
 }
 
+function isDesktopView() {
+  return window.matchMedia('(min-width: 900px) and (min-height: 520px)').matches;
+}
+
 function focusMap(latlng, zoomLevel = null, offsetRatio = 0) {
     map.invalidateSize(); 
 
     const targetZoom = zoomLevel || map.getZoom();
     
-    if (offsetRatio === 0 || window.innerWidth >= 769) {
+    if (offsetRatio === 0 || isDesktopView()) {
         map.setView(latlng, targetZoom, { animate: true, duration: 0.35 });
         return;
     }
@@ -658,7 +680,7 @@ function checkPanelsAndLegend() {
     const nearbyOpen = document.getElementById('nearby-panel').classList.contains('open');
     const legend = document.getElementById('legend');
 
-    if (window.innerWidth >= 769) {
+    if (isDesktopView()) {
         legend.classList.remove('hidden');
         return;
     }
@@ -1153,7 +1175,7 @@ function initDrag(panelId, dragId, closeFn) {
     const p = document.getElementById(panelId), d = document.getElementById(dragId); 
     let startY = 0, curY = 0, drag = false; 
     d.addEventListener('pointerdown', e => { 
-        if (window.innerWidth >= 769) return; 
+        if (isDesktopView()) return; 
         startY = e.clientY; drag = true; p.style.transition = 'none'; 
         try{e.target.setPointerCapture(e.pointerId);}catch(err){} 
     }, { passive: true }); 
@@ -1486,19 +1508,25 @@ function showStatus(msg, duration) { const el = document.getElementById('status'
 if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
   window.addEventListener('deviceorientation', handleOrientation, true);
 }
-// ⭐ 視窗大小與旋轉防抖更新，杜絕黑白邊留白與瓦片渲染不全
+// ⭐ 終極螢幕旋轉與視窗防抖更新 (杜絕抖動、跳動與瓦片破圖)
 let viewportResizeTimer = null;
 function handleViewportResize() {
   clearTimeout(viewportResizeTimer);
   viewportResizeTimer = setTimeout(() => {
     if (map) map.invalidateSize({ animate: false });
-  }, 120);
+    checkPanelsAndLegend();
+  }, 100);
 }
 window.addEventListener('resize', handleViewportResize);
+
 window.addEventListener('orientationchange', () => {
+  document.documentElement.classList.add('is-rotating');
+  if (map) map.invalidateSize({ animate: false });
   setTimeout(() => {
     if (map) map.invalidateSize({ animate: false });
-  }, 180);
+    checkPanelsAndLegend();
+    document.documentElement.classList.remove('is-rotating');
+  }, 320);
 });
 
 </script>
