@@ -700,23 +700,6 @@ function updateLayerSwitches() {
     document.getElementById('switch-theme').classList.toggle('on', mapMode === 'dark' || mapMode === 'satellite');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  updateTileLayer();
-  if (hoseLinesVisible) { map.addLayer(hoseLinesLayer); } else { map.removeLayer(hoseLinesLayer); }
-  if (layerVisible) { map.addLayer(layerGroup); } else { map.removeLayer(layerGroup); }
-  if (aedVisible) { map.addLayer(aedLayerGroup); } else { map.removeLayer(aedLayerGroup); }
-  updateLayerSwitches();
-  
-  // 防鬼觸控保護
-  const uiElements = ['search-card', 'search-suggestions', 'north-arrow', 'primary-controls', 'layer-menu', 'legend', 'nearby-panel', 'search-panel', 'info-panel'];
-  uiElements.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-          L.DomEvent.disableClickPropagation(el);
-      }
-  });
-});
-
 function parseCSV(text) {
   const rows = [];
   let currentRow = [], currentCell = '', insideQuotes = false;
@@ -725,7 +708,7 @@ function parseCSV(text) {
     if (char === '"' && insideQuotes && nextChar === '"') { currentCell += '"'; i++; } 
     else if (char === '"') { insideQuotes = !insideQuotes; } 
     else if (char === ',' && !insideQuotes) { currentRow.push(currentCell); currentCell = ''; } 
-    else if (char === '\n' || char === '\r') {
+    else if ((char === '\n' || char === '\r') && !insideQuotes) {
       if (char === '\r' && nextChar === '\n') i++;
       currentRow.push(currentCell); rows.push(currentRow);
       currentRow = []; currentCell = ''; insideQuotes = false; 
@@ -753,6 +736,21 @@ function getHydrantType(props) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  updateTileLayer();
+  if (hoseLinesVisible) { map.addLayer(hoseLinesLayer); } else { map.removeLayer(hoseLinesLayer); }
+  if (layerVisible) { map.addLayer(layerGroup); } else { map.removeLayer(layerGroup); }
+  if (aedVisible) { map.addLayer(aedLayerGroup); } else { map.removeLayer(aedLayerGroup); }
+  updateLayerSwitches();
+  
+  // 防鬼觸控保護
+  const uiElements = ['search-card', 'search-suggestions', 'north-arrow', 'primary-controls', 'layer-menu', 'legend', 'nearby-panel', 'search-panel', 'info-panel'];
+  uiElements.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+          L.DomEvent.disableClickPropagation(el);
+      }
+  });
+
   try {
     const response = await fetch('臺中市消防栓水源位置資料.csv');
     if (!response.ok) throw new Error('找不到 臺中市消防栓水源位置資料.csv');
@@ -978,6 +976,8 @@ function closeInfo() {
   checkPanelsAndLegend();
 }
 
+let highlightedPoints = [];
+
 function showNearby(lat, lng, centerName = null) {
   closeInfo();
   closeSearchPanel();
@@ -1005,7 +1005,7 @@ function showNearby(lat, lng, centerName = null) {
   });
 
   nearbyItems = [...allPoints].sort((a, b) => a.dist - b.dist).slice(0, nearbyCount);
-  const nearbySet = new Set(nearbyItems);
+  highlightedPoints = [...nearbyItems];
 
   nearbyItems.forEach((pt, i) => {
     pt.marker.setOpacity(0); 
@@ -1024,13 +1024,6 @@ function showNearby(lat, lng, centerName = null) {
       color: distColor, weight: 4, opacity: 0.8, dashArray: '10, 10', lineCap: 'round',
       className: 'flowing-line'
     }).addTo(hoseLinesLayer);
-  });
-
-  allPoints.forEach(pt => {
-    if (!nearbySet.has(pt)) {
-      pt.marker.setIcon(typeToIcon(pt.type, false, null));
-      pt.marker.setOpacity(1.0); 
-    }
   });
 
   // ⭐ UI 更新：直線距離
@@ -1075,10 +1068,13 @@ function flyTo(idx) {
 function clearNearbyHighlights() {
   highlightLayer.clearLayers();
   hoseLinesLayer.clearLayers(); 
-  allPoints.forEach(pt => {
-    pt.marker.setIcon(typeToIcon(pt.type, false, null));
-    pt.marker.setOpacity(1.0); 
-  });
+  if (highlightedPoints.length > 0) {
+    highlightedPoints.forEach(pt => {
+      pt.marker.setIcon(typeToIcon(pt.type, false, null));
+      pt.marker.setOpacity(1.0);
+    });
+    highlightedPoints = [];
+  }
   nearbyItems = [];
 }
 
@@ -1120,16 +1116,16 @@ function generateShareText() {
       refText = searchInfo.address || searchInfo.name || "火警地點";
   }
 
-let text = `🔥 火警發生地點：\n`;
-if (currentNearbyLat && currentNearbyLng) {
-    text += `https://www.google.com/maps/dir/?api=1&destination=${currentNearbyLat},${currentNearbyLng}\n`;
-}
+  let text = `🔥 參考地點：${refText}\n`;
+  if (currentNearbyLat && currentNearbyLng) {
+      text += `Google Maps：\nhttps://www.google.com/maps/dir/?api=1&destination=${currentNearbyLat},${currentNearbyLng}\n`;
+  }
   
-  text += `\n🧯 附近消防栓位置：\n`;
+  text += `\n🧯 附近消防栓資訊\n`;
   nearbyItems.forEach((item, i) => {
     const p = item.properties; const name = p.name || '消防栓';
     const dm = item.dist < 1000 ? `${Math.round(item.dist)}m` : `${(item.dist/1000).toFixed(1)}km`;
-    text += `\n${i + 1}. ${name}\nhttps://www.google.com/maps/dir/?api=1&destination=${item.latlng.lat},${item.latlng.lng}\n`
+    text += `\n${i + 1}. ${name} - 直線距離 ${dm}\n導航：https://www.google.com/maps/dir/?api=1&destination=${item.latlng.lat},${item.latlng.lng}\n`;
   });
   return text;
 }
@@ -1481,21 +1477,8 @@ function toggleAll() {
 
 function showStatus(msg, duration) { const el = document.getElementById('status'); el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', duration); }
 
-if (window.DeviceOrientationEvent) {
-  window.addEventListener('deviceorientation', function(event) {
-    let heading = null;
-    if (event.webkitCompassHeading) {
-      heading = event.webkitCompassHeading;
-    } else if (event.absolute && event.alpha !== null) {
-      heading = 360 - event.alpha;
-    } else if (event.alpha !== null) {
-      heading = 360 - event.alpha; 
-    }
-    if (heading !== null) {
-      const arrow = document.getElementById('user-heading-arrow');
-      if (arrow) arrow.style.transform = `rotate(${heading}deg)`;
-    }
-  }, true);
+if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+  window.addEventListener('deviceorientation', handleOrientation, true);
 }
 </script>
 </body>
